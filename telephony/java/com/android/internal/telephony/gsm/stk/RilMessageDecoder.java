@@ -164,7 +164,20 @@ class RilMessageDecoder extends HierarchicalStateMachine {
                 sendCmdForExecution(mCurrentRilMessage);
                 decodingStarted = false;
             }
-            break;
+            break; 
+        case StkService.MSG_ID_SEND_SMS_RESULT:
+            String error_code = (String)rilMsg.mData;
+            if (error_code.equalsIgnoreCase("OK"))
+            {
+                mCurrentRilMessage.mResCode = ResultCode.OK;
+            }
+            else
+            {
+                // some error != 0 
+                mCurrentRilMessage.mResCode = ResultCode.SMS_RP_ERROR;
+            }
+            sendCmdForExecution(mCurrentRilMessage);
+            decodingStarted = false;
         default:
             decodingStarted = false;
             break;

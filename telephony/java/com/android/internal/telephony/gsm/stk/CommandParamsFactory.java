@@ -136,8 +136,10 @@ class CommandParamsFactory extends Handler {
              case GET_INPUT:
                  cmdPending = processGetInput(cmdDet, ctlvs);
                  break;
+             case SEND_SMS: 
+                 cmdPending = processSendSms (cmdDet, ctlvs); 
+                 break;
              case SEND_DTMF:
-             case SEND_SMS:
              case SEND_SS:
              case SEND_USSD:
                  cmdPending = processEventNotify(cmdDet, ctlvs);
@@ -633,6 +635,67 @@ class CommandParamsFactory extends Handler {
         return false;
     }
 
+    //AMI SEND_SMS proactive command
+    /**
+     * Processes SEND_SMS proactive command.
+     *
+     * @param cmdDet Command Details container object.
+     * @param ctlvs List of ComprehensionTlv objects following Command Details
+     *        object and Device Identities object within the proactive command
+     * @return true if the command is processing is pending and additional
+     *         asynchronous processing is required.
+     */
+    private boolean processSendSms (CommandDetails cmdDet,
+            List<ComprehensionTlv> ctlvs) throws ResultException 
+    {
+        StkLog.d(this, "process SendSms");
+        
+        TextMessage textMsg = new TextMessage();
+        IconId iconId = null;
+
+        String smsc_address = null;
+        String sms_tpdu = null;
+        
+        ComprehensionTlv ctlv = searchForTag(ComprehensionTlvTag.ALPHA_ID,
+                ctlvs);
+        if (ctlv != null) {
+            textMsg.text = ValueParser.retrieveAlphaId(ctlv);
+        } else {
+            throw new ResultException(ResultCode.REQUIRED_VALUES_MISSING);
+        }
+
+        ctlv = searchForTag(ComprehensionTlvTag.ICON_ID, ctlvs);
+        if (ctlv != null) {
+            iconId = ValueParser.retrieveIconId(ctlv);
+            textMsg.iconSelfExplanatory = iconId.selfExplanatory;
+        }
+        
+        ctlv = searchForTag(ComprehensionTlvTag.ADDRESS, ctlvs);
+        if (ctlv != null) {
+            smsc_address = ValueParser.retrieveAddress(ctlv);
+        } else {
+            throw new ResultException(ResultCode.REQUIRED_VALUES_MISSING);
+        }
+        
+        ctlv = searchForTag(ComprehensionTlvTag.SMS_TPDU, ctlvs);
+        if (ctlv != null) {
+            sms_tpdu = ValueParser.retrieveSmsTpdu(ctlv);
+        } else {
+            throw new ResultException(ResultCode.REQUIRED_VALUES_MISSING);
+        }
+
+        textMsg.responseNeeded = false;
+        mCmdParams = new SmsParams(cmdDet, textMsg, smsc_address, sms_tpdu);
+        
+        if (iconId != null) {
+            mIconLoadState = LOAD_SINGLE_ICON;
+            mIconLoader.loadIcon(iconId.recordNumber, this
+                    .obtainMessage(MSG_ID_LOAD_ICON_DONE));
+            return true;
+        }
+        return false;
+    }
+    
     /**
      * Processes SET_UP_EVENT_LIST proactive command from the SIM card.
      *

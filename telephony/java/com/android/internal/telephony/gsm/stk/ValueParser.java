@@ -99,6 +99,74 @@ abstract class ValueParser {
     }
 
     /**
+     * aleksm:
+     * 
+     * Retrieves SMSC Address information from the COMPREHENSION-TLV object.
+     *
+     * @param ctlv A Text Attribute COMPREHENSION-TLV object
+     * @return An address
+     * @throws ResultException
+     */
+    static String retrieveAddress(ComprehensionTlv ctlv) throws ResultException {
+        
+        byte[] rawValue = ctlv.getRawValue();
+        int length = ctlv.getLength();
+        int valueIndex = ctlv.getValueIndex();
+        
+        byte [] resultCtlv = null;
+
+        if (length != 0) {
+            resultCtlv = new byte [length+1];
+            resultCtlv[0] = rawValue[valueIndex-1];
+            for (int i=0;i<length;i++)
+            {
+                resultCtlv[i+1] = rawValue[valueIndex + i]; 
+            }
+            try {
+                return IccUtils.bytesToHexString(resultCtlv);
+            } catch (IndexOutOfBoundsException e) {
+                throw new ResultException(ResultCode.CMD_DATA_NOT_UNDERSTOOD);
+            }
+        }
+
+        return null;
+    }
+    
+    /**
+     * aleksm:
+     * 
+     * Retrieves SMS TPDU information from the COMPREHENSION-TLV object.
+     *
+     * @param ctlv A Text Attribute COMPREHENSION-TLV object
+     * @return Hex String representation of TPDU
+     * @throws ResultException
+     */
+    static String retrieveSmsTpdu (ComprehensionTlv ctlv) throws ResultException {
+        
+        byte[] rawValue = ctlv.getRawValue();
+        int length = ctlv.getLength();
+        int valueIndex = ctlv.getValueIndex();
+
+        byte [] resultCtlv = null;
+        
+        if (length != 0) {
+            resultCtlv = new byte [length];
+            for (int i=0;i<length;i++)
+            {
+                resultCtlv[i] = rawValue[valueIndex + i]; 
+            }
+            
+            try {
+                return IccUtils.bytesToHexString(resultCtlv);
+            } catch (IndexOutOfBoundsException e) {
+                throw new ResultException(ResultCode.CMD_DATA_NOT_UNDERSTOOD);
+            }
+        }
+
+        return null;
+    }
+    
+    /**
      * Retrieves Item information from the COMPREHENSION-TLV object.
      *
      * @param ctlv A Text Attribute COMPREHENSION-TLV object

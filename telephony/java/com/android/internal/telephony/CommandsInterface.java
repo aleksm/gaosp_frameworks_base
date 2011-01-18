@@ -407,6 +407,19 @@ public interface CommandsInterface {
     void unSetOnStkEvent(Handler h);
 
     /**
+     * aleksm:
+     * 
+     * Sets the handler for Send SMS result Notifications for STK.
+     * 
+     *
+     * @param h Handler for notification message.
+     * @param what User-defined message code.
+     * @param obj User object.
+     */
+    void setOnStkSendSmsResult(Handler h, int what, Object obj);
+    void unSetOnStkSendSmsResult(Handler h);
+    
+    /**
      * Sets the handler for Call Set Up Notifications for STK.
      * Unlike the register* methods, there's only one notification handler
      *

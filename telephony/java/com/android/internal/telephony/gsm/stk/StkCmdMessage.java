@@ -57,10 +57,12 @@ public class StkCmdMessage implements Parcelable {
         case SELECT_ITEM:
             mMenu = ((SelectItemParams) cmdParams).menu;
             break;
+        case SEND_SMS:
+            mTextMsg = ((SmsParams)cmdParams).textMsg;
+            break;
         case DISPLAY_TEXT:
         case SET_UP_IDLE_MODE_TEXT:
         case SEND_DTMF:
-        case SEND_SMS:
         case SEND_SS:
         case SEND_USSD:
             mTextMsg = ((DisplayTextParams) cmdParams).textMsg;

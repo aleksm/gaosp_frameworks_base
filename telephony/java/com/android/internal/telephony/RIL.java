@@ -534,7 +534,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                         p.setDataPosition(0);
 
                         //Log.v(LOG_TAG, "Read packet: " + length + " bytes");
-
+                       
                         processResponse(p);
                         p.recycle();
                     }
@@ -2364,6 +2364,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_OEM_HOOK_RAW: ret = responseRaw(p); break;
             case RIL_UNSOL_RINGBACK_TONE: ret = responseInts(p); break;
             case RIL_UNSOL_RESEND_INCALL_MUTE: ret = responseVoid(p); break;
+            case RIL_UNSOL_STK_SEND_SMS_RESULT: ret = responseInts(p); break;
 
             default:
                 throw new RuntimeException("Unrecognized unsol response: " + response);
@@ -2518,6 +2519,24 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                 if (mStkEventRegistrant != null) {
                     mStkEventRegistrant.notifyRegistrant(
                                         new AsyncResult (null, ret, null));
+                }
+                break;
+                
+            case RIL_UNSOL_STK_SEND_SMS_RESULT:  
+                if (RILJ_LOGD) unsljLogRet(response, ret);
+
+                int[] smsResultIndex = (int[])ret;
+
+                if(smsResultIndex.length == 1) {
+                    if (mStkSendSmsResultRegistrant != null) {
+                        mStkSendSmsResultRegistrant.notifyRegistrant(
+                                            new AsyncResult (null, smsResultIndex, null));
+                    }
+                }
+                else
+                {
+                    if (RILJ_LOGD) riljLog(" RIL_UNSOL_STK_SEND_SMS_RESULT with wrong length "
+                            + smsResultIndex.length);
                 }
                 break;
 
@@ -3292,6 +3311,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_STK_SESSION_END: return "UNSOL_STK_SESSION_END";
             case RIL_UNSOL_STK_PROACTIVE_COMMAND: return "UNSOL_STK_PROACTIVE_COMMAND";
             case RIL_UNSOL_STK_EVENT_NOTIFY: return "UNSOL_STK_EVENT_NOTIFY";
+            case RIL_UNSOL_STK_SEND_SMS_RESULT: return "UNSOL_STK_SEND_SMS_RESULT";
             case RIL_UNSOL_STK_CALL_SETUP: return "UNSOL_STK_CALL_SETUP";
             case RIL_UNSOL_SIM_SMS_STORAGE_FULL: return "UNSOL_SIM_SMS_STORAGE_FULL";
             case RIL_UNSOL_SIM_REFRESH: return "UNSOL_SIM_REFRESH";

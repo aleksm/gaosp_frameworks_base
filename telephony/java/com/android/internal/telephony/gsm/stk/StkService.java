@@ -22,6 +22,7 @@ import android.os.AsyncResult;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.os.Parcel;
 
 import com.android.internal.telephony.IccUtils;
 import com.android.internal.telephony.CommandsInterface;
@@ -61,7 +62,10 @@ enum ComprehensionTlvTag {
   LANGUAGE(0x2d),
   URL(0x31),
   BROWSER_TERMINATION_CAUSE(0x34),
-  TEXT_ATTRIBUTE(0x50);
+  TEXT_ATTRIBUTE(0x50),
+  // aleksm: next 2 const are used for SEND_SMS 
+  ADDRESS (0x06),  
+  SMS_TPDU(0x0b);
 
     private int mValue;
 
@@ -132,6 +136,7 @@ public class StkService extends Handler implements AppInterface {
     static final int MSG_ID_CALL_SETUP               = 4;
     static final int MSG_ID_REFRESH                  = 5;
     static final int MSG_ID_RESPONSE                 = 6;
+    static final int MSG_ID_SEND_SMS_RESULT          = 7;
 
     static final int MSG_ID_RIL_MSG_DECODED          = 10;
 
@@ -164,6 +169,7 @@ public class StkService extends Handler implements AppInterface {
         mCmdIf.setOnStkProactiveCmd(this, MSG_ID_PROACTIVE_COMMAND, null);
         mCmdIf.setOnStkEvent(this, MSG_ID_EVENT_NOTIFY, null);
         mCmdIf.setOnStkCallSetUp(this, MSG_ID_CALL_SETUP, null);
+        mCmdIf.setOnStkSendSmsResult(this, MSG_ID_SEND_SMS_RESULT, null);
         //mCmdIf.setOnSimRefresh(this, MSG_ID_REFRESH, null);
 
         mSimRecords = sr;
@@ -181,6 +187,7 @@ public class StkService extends Handler implements AppInterface {
         mCmdIf.unSetOnStkProactiveCmd(this);
         mCmdIf.unSetOnStkEvent(this);
         mCmdIf.unSetOnStkCallSetUp(this);
+        mCmdIf.unSetOnStkSendSmsResult(this); 
 
         this.removeCallbacksAndMessages(null);
     }
@@ -217,6 +224,22 @@ public class StkService extends Handler implements AppInterface {
                     sendTerminalResponse(cmdParams.cmdDet, rilMsg.mResCode,
                             false, 0, null);
                 }
+            }
+            break;
+        // aleksm: upon receive of MSG_ID_SEND_SMS_RESULT message with error code 0
+        //         terminal response should be send. Since I didn't know from where
+        //         I could use original command details (SEND_SMS proactive command),
+        //         a new CommandDetails object was created (required by sendTerminalResponse).
+        case MSG_ID_SEND_SMS_RESULT:
+            CommandDetails cmdDetails = new CommandDetails();
+            cmdDetails.compRequired = true;
+            cmdDetails.commandNumber = 0x01;
+            cmdDetails.commandQualifier = 0x00;
+            cmdDetails.typeOfCommand = AppInterface.CommandType.SEND_SMS.value();
+               
+            if (rilMsg.mResCode == ResultCode.OK) 
+            {
+                sendTerminalResponse(cmdDetails, rilMsg.mResCode, false, 0, null);
             }
             break;
         case MSG_ID_REFRESH:
@@ -272,12 +295,14 @@ public class StkService extends Handler implements AppInterface {
             sendTerminalResponse(cmdParams.cmdDet, ResultCode.OK, false,
                     0, null);
             break;
+        case SEND_SMS: 
+            sendSms (cmdParams);
+            break;
         case LAUNCH_BROWSER:
         case SELECT_ITEM:
         case GET_INPUT:
         case GET_INKEY:
         case SEND_DTMF:
-        case SEND_SMS:
         case SEND_SS:
         case SEND_USSD:
         case PLAY_TONE:
@@ -306,6 +331,33 @@ public class StkService extends Handler implements AppInterface {
         mContext.sendBroadcast(intent);
     }
 
+    
+    /**
+     * aleksm:
+     * 
+     * Sends a SMS request to Network operator.
+     * 
+     */
+    private void sendSms (CommandParams cmdParams)
+    {
+        if (cmdParams == null)
+        {
+            return;
+        }
+        
+        String smsc_address = ((SmsParams)cmdParams).smsc_address;
+        String sms_tpdu = ((SmsParams)cmdParams).sms_tpdu;
+        
+        if (smsc_address != null && sms_tpdu != null)
+        {
+            mCmdIf.sendSMS(smsc_address, sms_tpdu, null);
+        }
+        else 
+        {
+            StkLog.d(this, "ERROR! smsc_address ( " + smsc_address + " ) or sms_tpdu ( " + sms_tpdu + " ) is null");   
+        }
+    }
+    
     private void sendTerminalResponse(CommandDetails cmdDet,
             ResultCode resultCode, boolean includeAdditionalInfo,
             int additionalInfo, ResponseData resp) {
@@ -509,6 +561,34 @@ public class StkService extends Handler implements AppInterface {
                 }
             }
             mMsgDecoder.sendStartDecodingMessageParams(new RilMessage(msg.what, data));
+            break;
+        
+        case MSG_ID_SEND_SMS_RESULT: 
+            
+            int [] sms_result_data = null;
+            
+            if (msg.obj != null) 
+            {
+                AsyncResult ar = (AsyncResult) msg.obj;
+                if (ar != null && ar.result != null) 
+                {
+                    try {
+                        sms_result_data = (int[]) ar.result;
+                    } catch (ClassCastException e) {
+                        break;
+                    }
+                }
+            }
+            
+            //aleksm: sms_result_data should have only one element
+            if (sms_result_data[0] == 0) //everything is OK - error code 0
+            {
+                mMsgDecoder.sendStartDecodingMessageParams(new RilMessage(msg.what, "OK"));
+            }
+            else
+            {
+                mMsgDecoder.sendStartDecodingMessageParams(new RilMessage(msg.what, "ERROR"));
+            }
             break;
         case MSG_ID_CALL_SETUP:
             mMsgDecoder.sendStartDecodingMessageParams(new RilMessage(msg.what, null));

@@ -77,6 +77,7 @@ public abstract class BaseCommands implements CommandsInterface {
     protected Registrant mStkProCmdRegistrant;
     protected Registrant mStkEventRegistrant;
     protected Registrant mStkCallSetUpRegistrant;
+    protected Registrant mStkSendSmsResultRegistrant;
     protected Registrant mIccSmsFullRegistrant;
     protected Registrant mEmergencyCallbackModeRegistrant;
     protected Registrant mIccRefreshRegistrant;
@@ -417,6 +418,14 @@ public abstract class BaseCommands implements CommandsInterface {
 
     public void unSetOnStkEvent(Handler h) {
         mStkEventRegistrant.clear();
+    }
+
+    public void setOnStkSendSmsResult(Handler h, int what, Object obj) {
+        mStkSendSmsResultRegistrant = new Registrant (h, what, obj);
+    }
+
+    public void unSetOnStkSendSmsResult(Handler h) {
+        mStkSendSmsResultRegistrant.clear();
     }
 
     public void setOnStkCallSetUp(Handler h, int what, Object obj) {

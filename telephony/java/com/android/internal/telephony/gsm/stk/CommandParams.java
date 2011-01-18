@@ -53,6 +53,37 @@ class DisplayTextParams extends CommandParams {
     }
 }
 
+
+/**
+ * aleksm:
+ * 
+ * Class for SEND_SMS proactive command. Keeps SMS relevant data along with text message
+ * to be displayed on screen while sending a SMS request.
+ */
+class SmsParams extends CommandParams
+{
+    TextMessage textMsg;
+    String smsc_address;
+    String sms_tpdu;
+    
+    SmsParams (CommandDetails cmdDet, TextMessage textMsg, 
+            String smsc_address, String sms_tpdu)
+    {
+        super (cmdDet);
+        this.textMsg = textMsg;
+        this.smsc_address = smsc_address;
+        this.sms_tpdu = sms_tpdu;
+    }
+    
+    boolean setIcon(Bitmap icon) {
+        if (icon != null && textMsg != null) {
+            textMsg.icon = icon;
+            return true;
+        }
+        return false;
+    }
+}
+
 class LaunchBrowserParams extends CommandParams {
     TextMessage confirmMsg;
     LaunchBrowserMode mode;
@@ -165,5 +196,4 @@ class GetInputParams extends CommandParams {
         return true;
     }
 }
-
 
